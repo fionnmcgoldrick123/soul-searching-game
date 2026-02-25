@@ -1,9 +1,15 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Player : MonoBehaviour
 {
+
+    [Header("Player Movement")]
     [SerializeField] private float moveSpeed = 0.5f;
     [SerializeField] private float jumpForce = 3f;
+    [SerializeField] private float doubleJumpMult = 2f;
+
+    private bool doubleJump = true;
 
     [SerializeField] private float lineDistance = 1f;
 
@@ -24,7 +30,7 @@ public class Player : MonoBehaviour
         HandleInput();
         HandleCollision();
     }
-    
+
     private void HandleInput()
     {
         HandleWalk();
@@ -42,14 +48,28 @@ public class Player : MonoBehaviour
     {
         if (Input.GetKey(KeyCode.LeftShift) && rb.linearVelocity.x != 0 && isGrounded)
             moveSpeed = 4;
-        else 
+        else
             moveSpeed = 3;
     }
 
     private void HandleJump()
     {
-        if(Input.GetKeyDown(KeyCode.Space) && isGrounded)
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            if (isGrounded)
+            {
+                Debug.Log(doubleJump);
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+                doubleJump = true;
+            }
+            else if (doubleJump)
+            {
+                Debug.Log("Double jump check");
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * doubleJumpMult);
+                doubleJump = false;
+            }
+        }
+
     }
 
     private void HandleCollision()
@@ -58,6 +78,6 @@ public class Player : MonoBehaviour
     }
 
     private void OnDrawGizmos() => Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
-    
+
 
 }
