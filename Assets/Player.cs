@@ -1,13 +1,26 @@
+using System;
+using System.Collections;
+using NUnit.Framework.Constraints;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 public class Player : MonoBehaviour
 {
 
+    private TrailRenderer trailRenderer;
+
     [Header("Player Movement")]
     [SerializeField] private float moveSpeed = 0.5f;
     [SerializeField] private float jumpForce = 3f;
     [SerializeField] private float doubleJumpMult = 2f;
+
+    [Header("Dashing Variables")]
+
+    [SerializeField] private float dashingPower = 4f;
+    [SerializeField] private float dashingTime = 0.5f;
+    private Vector2 dashingDir;
+    private bool isDashing;
+    private bool canDash;
 
     private bool doubleJump = true;
 
@@ -23,6 +36,7 @@ public class Player : MonoBehaviour
     private void Awake()
     {
         rb = GetComponentInParent<Rigidbody2D>();
+        trailRenderer = GetComponentInChildren<TrailRenderer>();
     }
 
     private void Update()
@@ -36,6 +50,7 @@ public class Player : MonoBehaviour
         HandleWalk();
         HandleSprint();
         HandleJump();
+        HandleDash();
     }
 
     private void HandleWalk()
@@ -58,18 +73,51 @@ public class Player : MonoBehaviour
         {
             if (isGrounded)
             {
-                Debug.Log(doubleJump);
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
                 doubleJump = true;
             }
             else if (doubleJump)
             {
-                Debug.Log("Double jump check");
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * doubleJumpMult);
                 doubleJump = false;
             }
         }
 
+    }
+
+    private void HandleDash()
+    {
+        var dashInput = Input.GetKeyDown(KeyCode.LeftShift);
+
+        if(dashInput && canDash)
+        {
+            canDash = false;
+            isDashing = true;
+            trailRenderer.emitting = true;
+            dashingDir = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
+            if(dashingDir == Vector2.zero)
+            {
+                dashingDir = new Vector2(transform.localScale.x, 0);
+            }
+            StartCoroutine(StopDashing());
+        }
+
+        if (isDashing)
+        {
+            rb.linearVelocity = dashingDir.normalized * dashingPower;
+        }
+
+        if (isGrounded)
+        {
+            canDash = true;
+        }
+    }
+
+    private IEnumerator StopDashing()
+    {
+        yield return new WaitForSeconds(dashingTime);
+        trailRenderer.emitting = false; 
+        isDashing = false;
     }
 
     private void HandleCollision()
@@ -78,6 +126,4 @@ public class Player : MonoBehaviour
     }
 
     private void OnDrawGizmos() => Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
-
-
 }
