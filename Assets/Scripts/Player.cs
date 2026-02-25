@@ -22,6 +22,12 @@ public class Player : MonoBehaviour
     private bool isDashing;
     private bool canDash;
 
+    [Header("Wall Slide Variables")]
+    [SerializeField] private Transform wallCheck;
+    [SerializeField] private float slideSpeed;
+    [SerializeField] private LayerMask whatIsWall;
+    [SerializeField] private bool isWallSliding;
+
     private bool doubleJump = true;
 
     [SerializeField] private float lineDistance = 1f;
@@ -33,16 +39,28 @@ public class Player : MonoBehaviour
     private Rigidbody2D rb;
     private float xInput;
 
+    private float horizontal;
+    private float vertical;
+
     private void Awake()
     {
         rb = GetComponentInParent<Rigidbody2D>();
         trailRenderer = GetComponentInChildren<TrailRenderer>();
     }
 
+    private void Start()
+    {
+
+    }
+
     private void Update()
     {
+
+        horizontal = Input.GetAxis("Horizontal");
+        vertical = Input.GetAxis("Vertical");
         HandleInput();
         HandleCollision();
+        HandleWallSlide();
     }
 
     private void HandleInput()
@@ -55,8 +73,7 @@ public class Player : MonoBehaviour
 
     private void HandleWalk()
     {
-        xInput = Input.GetAxis("Horizontal");
-        rb.linearVelocity = new Vector2(xInput * moveSpeed, rb.linearVelocity.y);
+        rb.linearVelocity = new Vector2(horizontal * moveSpeed, rb.linearVelocity.y);
     }
 
     private void HandleSprint()
@@ -89,13 +106,13 @@ public class Player : MonoBehaviour
     {
         var dashInput = Input.GetKeyDown(KeyCode.LeftShift);
 
-        if(dashInput && canDash)
+        if (dashInput && canDash)
         {
             canDash = false;
             isDashing = true;
             trailRenderer.emitting = true;
-            dashingDir = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
-            if(dashingDir == Vector2.zero)
+            dashingDir = new Vector2(horizontal, vertical);
+            if (dashingDir == Vector2.zero)
             {
                 dashingDir = new Vector2(transform.localScale.x, 0);
             }
@@ -103,27 +120,38 @@ public class Player : MonoBehaviour
         }
 
         if (isDashing)
-        {
             rb.linearVelocity = dashingDir.normalized * dashingPower;
-        }
 
         if (isGrounded)
-        {
             canDash = true;
-        }
+
     }
 
     private IEnumerator StopDashing()
     {
         yield return new WaitForSeconds(dashingTime);
-        trailRenderer.emitting = false; 
+        trailRenderer.emitting = false;
         isDashing = false;
     }
 
-    private void HandleCollision()
-    {
-        isGrounded = Physics2D.Raycast(transform.position, Vector2.down, lineDistance, whatIsGround);
-    }
+    private void HandleCollision() => isGrounded = Physics2D.Raycast(transform.position, Vector2.down, lineDistance, whatIsGround);
 
     private void OnDrawGizmos() => Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
+
+    private bool IsWalled()
+    {
+        float radius = .2f;
+        return Physics2D.OverlapCircle(wallCheck.position, radius, whatIsWall);
+    }
+
+    private void HandleWallSlide()
+    {
+        if(IsWalled() && !isGrounded && horizontal != 0f)
+        {
+            isWallSliding = true;
+            rb.linearVelocity = new Vector2(rb.linearVelocity.x, Math.Clamp(rb.linearVelocity.y, -slideSpeed, float.MaxValue));
+        }
+        else
+            isWallSliding = false;
+    }
 }
