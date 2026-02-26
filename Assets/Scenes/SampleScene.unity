@@ -439,6 +439,12 @@ MonoBehaviour:
   doubleJumpMult: 1.3
   dashingPower: 10
   dashingTime: 0.2
+  wallCheck: {fileID: 0}
+  slideSpeed: 0
+  whatIsWall:
+    serializedVersion: 2
+    m_Bits: 0
+  isWallSliding: 0
   lineDistance: 0.35
   whatIsGround:
     serializedVersion: 2
@@ -461,11 +467,48 @@ MonoBehaviour:
   doubleJumpMult: 1.3
   dashingPower: 10
   dashingTime: 0.2
+  wallCheck: {fileID: 0}
+  slideSpeed: 0
+  whatIsWall:
+    serializedVersion: 2
+    m_Bits: 0
+  isWallSliding: 0
   lineDistance: 0.3
   whatIsGround:
     serializedVersion: 2
     m_Bits: 8
   isGrounded: 0
+--- !u!1 &370534644
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 370534645}
+  m_Layer: 0
+  m_Name: WallCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &370534645
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 370534644}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.37, y: -0.09, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 376501638}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &376501635
 GameObject:
   m_ObjectHideFlags: 0
@@ -536,6 +579,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1452252186}
+  - {fileID: 370534645}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!50 &376501639
@@ -582,6 +626,12 @@ MonoBehaviour:
   doubleJumpMult: 1.3
   dashingPower: 10
   dashingTime: 0.2
+  wallCheck: {fileID: 370534645}
+  slideSpeed: 0.5
+  whatIsWall:
+    serializedVersion: 2
+    m_Bits: 128
+  isWallSliding: 0
   lineDistance: 0.6
   whatIsGround:
     serializedVersion: 2
@@ -1345,7 +1395,7 @@ GameObject:
   - component: {fileID: 1699021977}
   - component: {fileID: 1699021976}
   - component: {fileID: 1699021975}
-  m_Layer: 3
+  m_Layer: 7
   m_Name: Ground (2)
   m_TagString: Untagged
   m_Icon: {fileID: 0}

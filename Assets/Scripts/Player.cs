@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Runtime.CompilerServices;
 using NUnit.Framework.Constraints;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -9,15 +10,23 @@ public class Player : MonoBehaviour
 
     private TrailRenderer trailRenderer;
 
-    [Header("Player Movement")]
-    [SerializeField] private float moveSpeed = 0.5f;
-    [SerializeField] private float jumpForce = 3f;
-    [SerializeField] private float doubleJumpMult = 2f;
+    [Header("Player Horizontal Movement")]
+    [SerializeField] private float walkSpeed;
+    [SerializeField] private float sprintSpeed;
+    [SerializeField] private float acceleration;
+    [SerializeField] private float decceleration;
+    [SerializeField] private float velPower;
+    private float currentSpeed;
+
+    [Header("Player Vertical Movement (Jump)")]
+    [SerializeField] private float doubleJumpForce;
+    [SerializeField] private float jumpForce;
+    [SerializeField] private bool doubleJump = true;
 
     [Header("Dashing Variables")]
 
-    [SerializeField] private float dashingPower = 4f;
-    [SerializeField] private float dashingTime = 0.5f;
+    [SerializeField] private float dashingPower;
+    [SerializeField] private float dashingTime;
     private Vector2 dashingDir;
     private bool isDashing;
     private bool canDash;
@@ -28,9 +37,9 @@ public class Player : MonoBehaviour
     [SerializeField] private LayerMask whatIsWall;
     [SerializeField] private bool isWallSliding;
 
-    private bool doubleJump = true;
 
-    [SerializeField] private float lineDistance = 1f;
+
+    [SerializeField] private float lineDistance;
 
     [SerializeField] private LayerMask whatIsGround;
 
@@ -68,38 +77,44 @@ public class Player : MonoBehaviour
         HandleWalk();
         HandleSprint();
         HandleJump();
-        HandleDash();
+        // HandleDash();
     }
 
     private void HandleWalk()
     {
-        rb.linearVelocity = new Vector2(horizontal * moveSpeed, rb.linearVelocity.y);
+        float targetSpeed = horizontal * currentSpeed;
+        float speedDif = targetSpeed - rb.linearVelocity.x;
+        float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : decceleration;
+        float movement = Mathf.Pow(Mathf.Abs(speedDif) * accelRate, velPower) * Mathf.Sign(speedDif);
+
+        if(float.IsNaN(movement) || float.IsInfinity(movement)) return;
+
+        rb.AddForce(movement * Vector2.right);
     }
 
     private void HandleSprint()
     {
         if (Input.GetKey(KeyCode.LeftShift) && rb.linearVelocity.x != 0 && isGrounded)
-            moveSpeed = 4;
+            currentSpeed = sprintSpeed;
         else
-            moveSpeed = 3;
+            currentSpeed = walkSpeed;
     }
 
     private void HandleJump()
-    {
+    { 
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            if (isGrounded)
-            {
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-                doubleJump = true;
-            }
-            else if (doubleJump)
-            {
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce * doubleJumpMult);
-                doubleJump = false;
-            }
+        if (isGrounded)
+        {
+            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+            doubleJump = true;
         }
-
+        else if (doubleJump && !isGrounded)
+        {
+            rb.AddForce(Vector2.up * doubleJumpForce, ForceMode2D.Impulse);
+            doubleJump = false;
+        }
+        }
     }
 
     private void HandleDash()
