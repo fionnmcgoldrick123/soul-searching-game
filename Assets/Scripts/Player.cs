@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Runtime.CompilerServices;
 using NUnit.Framework.Constraints;
+using Unity.Android.Gradle.Manifest;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -22,6 +23,15 @@ public class Player : MonoBehaviour
     [SerializeField] private float doubleJumpForce;
     [SerializeField] private float jumpForce;
     [SerializeField] private bool doubleJump = true;
+    [SerializeField] private float jumpBufferTime;
+    [SerializeField] private float jumpCoyoteTime;
+    [SerializeField] private float peakJumpGravity;
+    [SerializeField] private float fallGravity;
+    [SerializeField] private float peakHangTimeThreshold;
+    private float startingGravity;
+    private bool isJumping;
+    private float lastTimeGrounded;
+    private float lastTimeJumped; // not used right now 
 
     [Header("Dashing Variables")]
 
@@ -55,11 +65,7 @@ public class Player : MonoBehaviour
     {
         rb = GetComponentInParent<Rigidbody2D>();
         trailRenderer = GetComponentInChildren<TrailRenderer>();
-    }
-
-    private void Start()
-    {
-
+        startingGravity = rb.gravityScale;
     }
 
     private void Update()
@@ -69,18 +75,18 @@ public class Player : MonoBehaviour
         vertical = Input.GetAxis("Vertical");
         HandleInput();
         HandleCollision();
-        HandleWallSlide();
+        WallSlide();
     }
 
     private void HandleInput()
     {
-        HandleWalk();
-        HandleSprint();
-        HandleJump();
-        // HandleDash();
+        Walk();
+        Sprint();
+        Jump();
+        // Dash();
     }
 
-    private void HandleWalk()
+    private void Walk()
     {
         float targetSpeed = horizontal * currentSpeed;
         float speedDif = targetSpeed - rb.linearVelocity.x;
@@ -92,7 +98,7 @@ public class Player : MonoBehaviour
         rb.AddForce(movement * Vector2.right);
     }
 
-    private void HandleSprint()
+    private void Sprint()
     {
         if (Input.GetKey(KeyCode.LeftShift) && rb.linearVelocity.x != 0 && isGrounded)
             currentSpeed = sprintSpeed;
@@ -100,24 +106,50 @@ public class Player : MonoBehaviour
             currentSpeed = walkSpeed;
     }
 
-    private void HandleJump()
+    private void Jump()
     { 
+
+        JumpTimers();
+
+        JumpGravity();
+
         if (Input.GetKeyDown(KeyCode.Space))
         {
-        if (isGrounded)
-        {
-            rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-            doubleJump = true;
-        }
-        else if (doubleJump && !isGrounded)
-        {
-            rb.AddForce(Vector2.up * doubleJumpForce, ForceMode2D.Impulse);
-            doubleJump = false;
-        }
+
+            bool canCoyoteJump = lastTimeGrounded > 0 && !isJumping;
+        
+            if (isGrounded || canCoyoteJump)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+                lastTimeJumped = jumpBufferTime;
+                isJumping = true;
+                doubleJump = true;
+            }
+            else if (doubleJump && !isGrounded)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, doubleJumpForce);
+                doubleJump = false;
+            }
         }
     }
 
-    private void HandleDash()
+    private void JumpGravity()
+    {
+        // if(rb.linearVelocityY < peakHangTimeThreshold && isJumping)
+        // {
+        //    rb.gravityScale = peakJumpGravity; 
+        // }  
+
+        if(Input.GetKeyUp(KeyCode.Space) || rb.linearVelocityY < 0) rb.gravityScale = fallGravity;  
+    }
+
+    private void JumpTimers()
+    {
+        lastTimeGrounded -= Time.deltaTime;
+        lastTimeJumped -= Time.deltaTime;
+    }
+
+    private void Dash()
     {
         var dashInput = Input.GetKeyDown(KeyCode.LeftShift);
 
@@ -149,7 +181,22 @@ public class Player : MonoBehaviour
         isDashing = false;
     }
 
-    private void HandleCollision() => isGrounded = Physics2D.Raycast(transform.position, Vector2.down, lineDistance, whatIsGround);
+    private void HandleCollision()
+    {
+        GroundCollision();
+    }
+
+    private void GroundCollision()
+    {
+        isGrounded = Physics2D.Raycast(transform.position, Vector2.down, lineDistance, whatIsGround);
+
+        if (isGrounded && rb.linearVelocityY <= 0)
+        {
+            lastTimeGrounded = jumpCoyoteTime;
+            isJumping = false;
+            rb.gravityScale = startingGravity;
+        }
+    }
 
     private void OnDrawGizmos() => Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
 
@@ -159,7 +206,7 @@ public class Player : MonoBehaviour
         return Physics2D.OverlapCircle(wallCheck.position, radius, whatIsWall);
     }
 
-    private void HandleWallSlide()
+    private void WallSlide()
     {
         if(IsWalled() && !isGrounded && horizontal != 0f)
         {
