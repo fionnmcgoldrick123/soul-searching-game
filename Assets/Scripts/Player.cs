@@ -8,9 +8,6 @@ using UnityEngine.InputSystem;
 
 public class Player : MonoBehaviour
 {
-
-    private TrailRenderer trailRenderer;
-
     [Header("Player Horizontal Movement")]
     [SerializeField] private float walkSpeed;
     [SerializeField] private float sprintSpeed;
@@ -31,10 +28,9 @@ public class Player : MonoBehaviour
     private float startingGravity;
     private bool isJumping;
     private float lastTimeGrounded;
-    private float lastTimeJumped; // not used right now 
+    private float lastTimeJumped; // not used right now but will be used for jump buffering
 
     [Header("Dashing Variables")]
-
     [SerializeField] private float dashingPower;
     [SerializeField] private float dashingTime;
     private Vector2 dashingDir;
@@ -47,8 +43,6 @@ public class Player : MonoBehaviour
     [SerializeField] private LayerMask whatIsWall;
     [SerializeField] private bool isWallSliding;
 
-
-
     [SerializeField] private float lineDistance;
 
     [SerializeField] private LayerMask whatIsGround;
@@ -56,10 +50,15 @@ public class Player : MonoBehaviour
     [SerializeField] private bool isGrounded;
 
     private Rigidbody2D rb;
-    private float xInput;
 
     private float horizontal;
     private float vertical;
+
+    [Header("Interaction Variables")]
+    private IInteractable currentInteractable;
+    [SerializeField] private float interactDistance = 1f;
+
+    private TrailRenderer trailRenderer;
 
     private void Awake()
     {
@@ -76,6 +75,7 @@ public class Player : MonoBehaviour
         HandleInput();
         HandleCollision();
         WallSlide();
+        DetectInteractables();
     }
 
     private void HandleInput()
@@ -83,6 +83,7 @@ public class Player : MonoBehaviour
         Walk();
         Sprint();
         Jump();
+        Interact();
         // Dash();
     }
 
@@ -93,7 +94,7 @@ public class Player : MonoBehaviour
         float accelRate = (Mathf.Abs(targetSpeed) > 0.01f) ? acceleration : decceleration;
         float movement = Mathf.Pow(Mathf.Abs(speedDif) * accelRate, velPower) * Mathf.Sign(speedDif);
 
-        if(float.IsNaN(movement) || float.IsInfinity(movement)) return;
+        if (float.IsNaN(movement) || float.IsInfinity(movement)) return;
 
         rb.AddForce(movement * Vector2.right);
     }
@@ -106,8 +107,10 @@ public class Player : MonoBehaviour
             currentSpeed = walkSpeed;
     }
 
+    #region Jumping
+
     private void Jump()
-    { 
+    {
 
         JumpTimers();
 
@@ -117,7 +120,7 @@ public class Player : MonoBehaviour
         {
 
             bool canCoyoteJump = lastTimeGrounded > 0 && !isJumping;
-        
+
             if (isGrounded || canCoyoteJump)
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
@@ -140,7 +143,7 @@ public class Player : MonoBehaviour
         //    rb.gravityScale = peakJumpGravity; 
         // }  
 
-        if(Input.GetKeyUp(KeyCode.Space) || rb.linearVelocityY < 0) rb.gravityScale = fallGravity;  
+        if (Input.GetKeyUp(KeyCode.Space) || rb.linearVelocityY < 0) rb.gravityScale = fallGravity;
     }
 
     private void JumpTimers()
@@ -148,6 +151,10 @@ public class Player : MonoBehaviour
         lastTimeGrounded -= Time.deltaTime;
         lastTimeJumped -= Time.deltaTime;
     }
+
+    #endregion
+
+    #region Dashing
 
     private void Dash()
     {
@@ -181,6 +188,10 @@ public class Player : MonoBehaviour
         isDashing = false;
     }
 
+    #endregion
+
+    #region Collision
+
     private void HandleCollision()
     {
         GroundCollision();
@@ -200,6 +211,10 @@ public class Player : MonoBehaviour
 
     private void OnDrawGizmos() => Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
 
+    #endregion
+
+    #region WallSlide&Jump
+
     private bool IsWalled()
     {
         float radius = .2f;
@@ -208,7 +223,7 @@ public class Player : MonoBehaviour
 
     private void WallSlide()
     {
-        if(IsWalled() && !isGrounded && horizontal != 0f)
+        if (IsWalled() && !isGrounded && horizontal != 0f)
         {
             isWallSliding = true;
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, Math.Clamp(rb.linearVelocity.y, -slideSpeed, float.MaxValue));
@@ -216,4 +231,33 @@ public class Player : MonoBehaviour
         else
             isWallSliding = false;
     }
+
+    #endregion
+
+    #region Interaction
+
+    private void DetectInteractables()
+    {
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, Vector2.right * transform.localScale.x, interactDistance);
+
+        if (hit.collider != null)
+        {
+            currentInteractable = hit.collider.GetComponent<IInteractable>();
+
+            if (currentInteractable != null && currentInteractable.CanInteract() && Input.GetKeyDown(KeyCode.E))
+            {
+                currentInteractable.Interact();
+            }
+        }
+    }
+
+    private void Interact()
+    {
+        if (currentInteractable != null && currentInteractable.CanInteract() && Input.GetKeyDown(KeyCode.E))
+        {
+            currentInteractable.Interact();
+        }
+    }
+
+    #endregion 
 }
