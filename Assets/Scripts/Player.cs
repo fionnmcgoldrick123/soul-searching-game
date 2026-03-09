@@ -59,6 +59,7 @@ public class Player : MonoBehaviour
 
     [Header("Interaction Variables")]
     [SerializeField] private float interactDistance = 1f;
+    [SerializeField] private LayerMask interactableLayer;
     private IInteractable currentInteractable;
 
     private TrailRenderer trailRenderer;
@@ -270,7 +271,7 @@ public class Player : MonoBehaviour
     private void DetectInteractables()
     {
         Vector2 direction = facingRight ? Vector2.right : Vector2.left;
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, direction, interactDistance);
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, direction, interactDistance, interactableLayer);
 
         IInteractable found = hit.collider?.GetComponentInParent<IInteractable>();
 
