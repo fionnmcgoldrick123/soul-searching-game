@@ -4,12 +4,14 @@ using NUnit.Framework;
 using TMPro;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class NPC : MonoBehaviour, IInteractable
 {
     [SerializeField] private GameObject dialoguePanel;
     [SerializeField] private TMP_Text nameText, dialogueText;
     [SerializeField] private Dialogue dialogue;
+    [SerializeField] private TextMeshProUGUI interactionPrompt;
 
     private bool isDialogueActive;
     private bool isTyping;
@@ -18,6 +20,7 @@ public class NPC : MonoBehaviour, IInteractable
     private void Start()
     {
         dialoguePanel.SetActive(false);
+        interactionPrompt.gameObject.SetActive(false);
     }
 
     public void Interact()
@@ -42,7 +45,7 @@ public class NPC : MonoBehaviour, IInteractable
         isDialogueActive = true;
         dialogueIndex = 0;
 
-        nameText.text = dialogue.name;
+        nameText.text = dialogue.npcName;
         
         dialoguePanel.SetActive(true);
 
@@ -91,5 +94,15 @@ public class NPC : MonoBehaviour, IInteractable
     {
         isDialogueActive = false;
         dialoguePanel.SetActive(false);
+    }
+
+    public void ShowInteractionPrompt()
+    {
+        interactionPrompt.gameObject.SetActive(true);
+    }
+
+    public void HideInteractionPrompt()
+    {
+        interactionPrompt.gameObject.SetActive(false);
     }
 }

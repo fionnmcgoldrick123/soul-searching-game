@@ -3,6 +3,8 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using NUnit.Framework.Constraints;
 using Unity.Android.Gradle.Manifest;
+using Unity.XR.OpenVR;
+using UnityEditor.Tilemaps;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -15,6 +17,7 @@ public class Player : MonoBehaviour
     [SerializeField] private float decceleration;
     [SerializeField] private float velPower;
     private float currentSpeed;
+    private bool facingRight = true;
 
     [Header("Player Vertical Movement (Jump)")]
     [SerializeField] private float doubleJumpForce;
@@ -55,8 +58,8 @@ public class Player : MonoBehaviour
     private float vertical;
 
     [Header("Interaction Variables")]
-    private IInteractable currentInteractable;
     [SerializeField] private float interactDistance = 1f;
+    private IInteractable currentInteractable;
 
     private TrailRenderer trailRenderer;
 
@@ -83,9 +86,28 @@ public class Player : MonoBehaviour
         Walk();
         Sprint();
         Jump();
+        HandleFlip();
         Interact();
         // Dash();
     }
+
+    #region Flip
+
+    private void HandleFlip()
+    {
+        if (horizontal > 0 && !facingRight)
+            Flip();
+        else if (horizontal < 0 && facingRight)
+            Flip();
+    }
+
+    private void Flip()
+    {
+        facingRight = !facingRight;
+        transform.Rotate(0, 180, 0);
+    }
+
+    #endregion
 
     private void Walk()
     {
@@ -209,7 +231,16 @@ public class Player : MonoBehaviour
         }
     }
 
-    private void OnDrawGizmos() => Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
+    private void OnDrawGizmos()
+    {
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(transform.position, transform.position + new Vector3(0, -lineDistance));
+
+        Gizmos.color = Color.blue;
+        Vector2 direction = facingRight ? Vector2.right : Vector2.left;
+        Gizmos.DrawLine(transform.position, transform.position + (Vector3)(direction * interactDistance));
+
+    }
 
     #endregion
 
@@ -238,16 +269,16 @@ public class Player : MonoBehaviour
 
     private void DetectInteractables()
     {
-        RaycastHit2D hit = Physics2D.Raycast(transform.position, Vector2.right * transform.localScale.x, interactDistance);
+        Vector2 direction = facingRight ? Vector2.right : Vector2.left;
+        RaycastHit2D hit = Physics2D.Raycast(transform.position, direction, interactDistance);
 
-        if (hit.collider != null)
+        IInteractable found = hit.collider?.GetComponentInParent<IInteractable>();
+
+        if (found != currentInteractable)
         {
-            currentInteractable = hit.collider.GetComponent<IInteractable>();
-
-            if (currentInteractable != null && currentInteractable.CanInteract() && Input.GetKeyDown(KeyCode.E))
-            {
-                currentInteractable.Interact();
-            }
+            currentInteractable?.HideInteractionPrompt();
+            currentInteractable = found;
+            currentInteractable?.ShowInteractionPrompt();
         }
     }
 
@@ -255,9 +286,10 @@ public class Player : MonoBehaviour
     {
         if (currentInteractable != null && currentInteractable.CanInteract() && Input.GetKeyDown(KeyCode.E))
         {
+            Debug.Log("Interacting with " + currentInteractable);
             currentInteractable.Interact();
         }
     }
 
-    #endregion 
+    #endregion
 }
